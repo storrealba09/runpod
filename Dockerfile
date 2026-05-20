@@ -1,63 +1,61 @@
 # ============================================================
-# Custom Wan2.2 worker — CUDA 12.1 for RTX 4090 compatibility
+# Custom Wan2.2 worker — CUDA 12.1 for RTX 4090
+# Global install, no venv, manual ComfyUI setup
 # ============================================================
-ARG BASE_IMAGE=nvidia/cuda:12.1.0-runtime-ubuntu22.04
-
-FROM ${BASE_IMAGE} AS base
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PIP_PREFER_BINARY=1
 ENV PYTHONUNBUFFERED=1
+ENV PIP_PREFER_BINARY=1
 ENV CMAKE_BUILD_PARALLEL_LEVEL=8
 
-# Install Python 3.10 + system deps
+# Install Python + system deps
 RUN apt-get update && apt-get install -y \
     python3.10 python3.10-venv python3-pip \
-    git wget libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
-    ffmpeg openssh-server curl && \
-    ln -sf /usr/bin/python3.10 /usr/bin/python && \
-    ln -sf /usr/bin/pip3 /usr/bin/pip && \
-    apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+    git wget curl libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+    libgomp1 ffmpeg openssh-server \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python3 \
+    && ln -sf /usr/bin/pip3 /usr/bin/pip \
+    && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-RUN wget -qO- https://astral.sh/uv/install.sh | sh && \
-    ln -s /root/.local/bin/uv /usr/local/bin/uv && \
-    ln -s /root/.local/bin/uvx /usr/local/bin/uvx && \
-    uv venv /opt/venv
-ENV PATH="/opt/venv/bin:${PATH}"
+# Install pip packages globally
+RUN pip install --upgrade pip setuptools wheel
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-# Install comfy-cli + ComfyUI
-RUN uv pip install comfy-cli pip setuptools wheel
-RUN /usr/bin/yes | comfy --workspace /comfyui install --version latest --cuda-version 12.1 --nvidia
-
+# Clone ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui
 WORKDIR /comfyui
+RUN pip install -r requirements.txt
 
-# RunPod handler deps
-RUN uv pip install runpod requests websocket-client
+# RunPod deps + handler
+RUN pip install runpod requests websocket-client
 
-# ========== Download handler files from official repo ==========
 WORKDIR /
-RUN wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/main/handler.py -O /handler.py && \
-    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/main/src/start.sh -O /start.sh && \
-    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/main/src/network_volume.py -O /network_volume.py && \
-    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/main/src/extra_model_paths.yaml -O /extra_model_paths.yaml && \
-    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/main/test_input.json -O /test_input.json && \
-    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/main/scripts/comfy-node-install.sh -O /usr/local/bin/comfy-node-install && \
-    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/main/scripts/comfy-manager-set-mode.sh -O /usr/local/bin/comfy-manager-set-mode && \
+
+# Download official handler files (v5.1.0)
+RUN wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/5.1.0/handler.py -O /handler.py && \
+    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/5.1.0/src/start.sh -O /start.sh && \
+    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/5.1.0/src/network_volume.py -O /network_volume.py && \
+    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/5.1.0/src/extra_model_paths.yaml -O /extra_model_paths.yaml && \
+    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/5.1.0/test_input.json -O /test_input.json && \
+    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/5.1.0/scripts/comfy-node-install.sh -O /usr/local/bin/comfy-node-install && \
+    wget -q https://raw.githubusercontent.com/runpod-workers/worker-comfyui/5.1.0/scripts/comfy-manager-set-mode.sh -O /usr/local/bin/comfy-manager-set-mode && \
     chmod +x /start.sh /usr/local/bin/comfy-node-install /usr/local/bin/comfy-manager-set-mode
 
 ENV PIP_NO_INPUT=1
 
 # ========== Custom nodes ==========
 RUN git clone https://github.com/Kijai/ComfyUI-WanVideoWrapper.git /comfyui/custom_nodes/ComfyUI-WanVideoWrapper && \
-    uv pip install -r /comfyui/custom_nodes/ComfyUI-WanVideoWrapper/requirements.txt
+    pip install -r /comfyui/custom_nodes/ComfyUI-WanVideoWrapper/requirements.txt && \
+    pip install --upgrade pillow
 
 RUN git clone https://github.com/Flow-two/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative
 
 RUN git clone https://github.com/city96/ComfyUI-GGUF.git /comfyui/custom_nodes/ComfyUI-GGUF
 
 RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git /comfyui/custom_nodes/ComfyUI-KJNodes && \
-    uv pip install -r /comfyui/custom_nodes/ComfyUI-KJNodes/requirements.txt
+    pip install -r /comfyui/custom_nodes/ComfyUI-KJNodes/requirements.txt
 
 # ========== Pre-download models (build time!) ==========
 RUN mkdir -p /comfyui/models/diffusion_models && \
