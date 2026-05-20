@@ -1,0 +1,115 @@
+{
+  "3": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "start_frame.png" }
+  },
+  "4": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "end_frame.png" }
+  },
+  "13": {
+    "class_type": "CLIPLoader",
+    "inputs": { "clip_name": "umt5_xxl_q8.safetensors", "type": "wan" }
+  },
+  "17": {
+    "class_type": "CLIPVisionLoader",
+    "inputs": { "clip_name": "clip_vision_h.safetensors" }
+  },
+  "15": {
+    "class_type": "VAELoader",
+    "inputs": { "vae_name": "Wan2.2_VAE_14B.safetensors" }
+  },
+  "12": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "pixel art of a bitcoin miner walking towards a glowing computer, retro 8-bit game style, smooth motion",
+      "clip": ["13", 0]
+    }
+  },
+  "14": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "blurry, distorted, low quality, static, text, watermark",
+      "clip": ["13", 0]
+    }
+  },
+  "45": {
+    "class_type": "ImageNoiseAugmentation",
+    "inputs": { "image": ["3", 0], "strength": 0.015, "noise_seed": 1234, "noise_mode": "fixed" }
+  },
+  "46": {
+    "class_type": "ImageNoiseAugmentation",
+    "inputs": { "image": ["4", 0], "strength": 0.015, "noise_seed": 1234, "noise_mode": "fixed" }
+  },
+  "16": {
+    "class_type": "CLIPVisionEncode",
+    "inputs": { "clip_vision": ["17", 0], "image": ["45", 0] }
+  },
+  "123": {
+    "class_type": "WanImageToVideo_F2",
+    "inputs": {
+      "positive": ["12", 0],
+      "negative": ["14", 0],
+      "vae": ["15", 0],
+      "start_image": ["45", 0],
+      "end_image": ["46", 0],
+      "clip_vision_output": ["16", 0],
+      "width": 832, "height": 480, "length": 81
+    }
+  },
+  "8": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": { "unet_name": "wan2.2-i2v-14b-Q4_K_M.gguf" }
+  },
+  "48": {
+    "class_type": "ModelSamplingSD3",
+    "inputs": { "model": ["8", 0], "shift": 8.0 }
+  },
+  "47": {
+    "class_type": "SkipLayerGuidanceWanVideo",
+    "inputs": { "model": ["48", 0], "start_layer": "10", "guidance_strength": 0.1, "guidance_layer": 1 }
+  },
+  "50": {
+    "class_type": "WanVideoEnhanceAVideoKJ",
+    "inputs": { "model": ["47", 0], "latent": ["123", 2], "strength": 2.0 }
+  },
+  "103": {
+    "class_type": "BasicScheduler",
+    "inputs": { "model": ["50", 0], "scheduler": "sgm_uniform", "steps": 20, "denoise": 1.0 }
+  },
+  "104": {
+    "class_type": "KSamplerSelect",
+    "inputs": { "sampler_name": "uni_pc" }
+  },
+  "116": {
+    "class_type": "CFGGuider",
+    "inputs": {
+      "model": ["50", 0],
+      "positive": ["123", 0],
+      "negative": ["123", 1],
+      "cfg": 6.0
+    }
+  },
+  "117": {
+    "class_type": "RandomNoise",
+    "inputs": { "seed": 42, "noise_mode": "fixed" }
+  },
+  "108": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {
+      "noise": ["117", 0],
+      "guider": ["116", 0],
+      "sampler": ["104", 0],
+      "sigmas": ["103", 0],
+      "latent_image": ["123", 2]
+    }
+  },
+  "37": {
+    "class_type": "VAEDecode",
+    "inputs": { "vae": ["15", 0], "samples": ["108", 0] }
+  },
+  "121": {
+    "class_type": "WanSkipEndFrameImages_F2",
+    "inputs": { "images": ["37", 0], "skip_end_frames": 1 }
+  }
+}
