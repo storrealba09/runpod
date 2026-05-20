@@ -60,9 +60,9 @@ RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git /comfyui/custom_nodes
     uv pip install -r /comfyui/custom_nodes/ComfyUI-KJNodes/requirements.txt
 
 # ========== Pre-download models (build time!) ==========
-RUN mkdir -p /comfyui/models/unet_gguf && \
+RUN mkdir -p /comfyui/models/diffusion_models && \
     wget -c https://huggingface.co/city96/Wan2.1-I2V-14B-720P-gguf/resolve/main/wan2.1-i2v-14b-720p-Q8_0.gguf \
-    -O /comfyui/models/unet_gguf/wan2.1-i2v-14b-720p-Q8_0.gguf
+    -O /comfyui/models/diffusion_models/wan2.1-i2v-14b-720p-Q8_0.gguf
 
 RUN mkdir -p /comfyui/models/clip && \
     wget -c https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors \
