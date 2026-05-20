@@ -18,10 +18,29 @@ RUN git clone https://github.com/city96/ComfyUI-GGUF.git /comfyui/custom_nodes/C
 RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git /comfyui/custom_nodes/ComfyUI-KJNodes
 
 # ============================================================
-# Pre-download Wan2.2 I2V GGUF model (fits 24GB VRAM)
-# Auto-downloads on first use if not present, but pre-downloading
-# speeds up cold starts by ~2 min
+# Pre-download models (into Docker image, not at runtime)
 # ============================================================
 
-# Wan2.2 I2V GGUF quantized — works on RTX 4090 (24GB)
-# Model auto-downloads via WanVideoWrapper on first use
+# Wan2.2 I2V GGUF model (Q4_K_M = ~7GB, fits 24GB VRAM)
+RUN comfy model download \
+  --url https://huggingface.co/city96/Wan2.1-I2V-14B-720P-gguf/resolve/main/wan2.1-i2v-14b-720p-Q8_0.gguf \
+  --relative-path models/unet_gguf \
+  --filename wan2.1-i2v-14b-720p-Q8_0.gguf
+
+# UMT5 text encoder for Wan2.1
+RUN comfy model download \
+  --url https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors \
+  --relative-path models/clip \
+  --filename umt5_xxl_fp8_e4m3fn_scaled.safetensors
+
+# CLIP vision encoder
+RUN comfy model download \
+  --url https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors \
+  --relative-path models/clip_vision \
+  --filename clip_vision_h.safetensors
+
+# Wan2.1 VAE
+RUN comfy model download \
+  --url https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors \
+  --relative-path models/vae \
+  --filename wan_2.1_vae.safetensors
