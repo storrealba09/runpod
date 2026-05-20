@@ -11,6 +11,12 @@ RUN git clone https://github.com/Kijai/ComfyUI-WanVideoWrapper.git /comfyui/cust
 # Start + End Frame I2V — generates video BETWEEN two images
 RUN git clone https://github.com/Flow-two/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative
 
+# GGUF model loader — for loading quantized Wan2.2 models
+RUN git clone https://github.com/city96/ComfyUI-GGUF.git /comfyui/custom_nodes/ComfyUI-GGUF
+
+# KJNodes — provides WanVideoEnhanceAVideo, SkipLayerGuidance and more
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git /comfyui/custom_nodes/ComfyUI-KJNodes
+
 # ============================================================
 # Pre-download Wan2.2 I2V GGUF model (fits 24GB VRAM)
 # Auto-downloads on first use if not present, but pre-downloading
